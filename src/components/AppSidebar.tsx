@@ -17,7 +17,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -33,6 +32,7 @@ import {
   FolderIcon,
 } from "lucide-react";
 import { use, useRef, type PropsWithChildren } from "react";
+import { AppSidebarHeader } from "./AppSidebarHeader";
 import {
   Collapsible,
   CollapsibleContent,
@@ -74,10 +74,8 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <span className="truncate font-semibold text-xl">WebTeX</span>
-      </SidebarHeader>
+    <Sidebar collapsible="icon">
+      <AppSidebarHeader />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
