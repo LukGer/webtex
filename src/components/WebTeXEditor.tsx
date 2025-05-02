@@ -1,57 +1,78 @@
 import { WorkspaceContext } from "@/utils/files";
-import { Editor } from "@monaco-editor/react";
-import { use, useEffect, useState } from "react";
+import {
+  forwardRef,
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
+import MonacoEditor from "./MonacoEditor";
 
-const LANGUAGE_MAP: { [key: string]: string } = {
-  tex: "tex",
+export interface WebTeXEditorHandle {
+  saveFile: () => Promise<void>;
+  getContent: () => string | undefined;
+}
+
+const EXTENSIONS_MAP = {
+  tex: "latex",
   bib: "bibtex",
-  cls: "tex",
-  sty: "tex",
-};
+  sty: "latex",
+  cls: "latex",
+  bst: "bibtex",
+  dtx: "latex",
+  ins: "latex",
+  ltx: "latex",
+  lss: "latex",
+} as const;
 
-export default function WebTeXEditor({
-  editorRef,
-}: {
-  editorRef: React.RefObject<any>;
-}) {
-  const [language, setLanguage] = useState("tex");
+const WebTeXEditor = forwardRef<WebTeXEditorHandle>((_props, ref) => {
+  const { selectedFile } = useContext(WorkspaceContext);
 
-  const { selectedFile } = use(WorkspaceContext);
+  const [path, setPath] = useState<string>("");
+  const [value, setValue] = useState<string>("");
+  const [language, setLanguage] = useState<string>("plaintext");
+
+  useImperativeHandle(ref, () => ({
+    saveFile: async () => {
+      if (selectedFile) {
+        const content = value;
+        const fileHandle = selectedFile.fileHandle;
+        const writable = await fileHandle.createWritable();
+        await writable.write(content ?? "");
+        await writable.close();
+      }
+    },
+    getContent: () => {
+      return value;
+    },
+  }));
 
   useEffect(() => {
-    async function loadFile() {
-      if (selectedFile && editorRef.current) {
-        const fileExtension = selectedFile.path.split(".").pop() ?? "";
-        const detectedLanguage = LANGUAGE_MAP[fileExtension] ?? "plaintext";
-        setLanguage(detectedLanguage);
+    async function loadModel() {
+      if (!selectedFile) return;
 
-        const file = await selectedFile.fileHandle.getFile();
-        const content = await file.text();
+      const file = await selectedFile.fileHandle.getFile();
+      const content = await file.text();
+      const extension = selectedFile.path.split(".").pop() || "";
+      const language =
+        EXTENSIONS_MAP[extension as keyof typeof EXTENSIONS_MAP] || "plaintext";
 
-        editorRef.current.setValue(content);
-      } else if (!selectedFile && editorRef.current) {
-        // Clear editor if no file is selected
-        editorRef.current.setValue("// Select a file on the left to edit");
-        setLanguage("plaintext"); // Reset language when no file is selected
-      }
+      setPath(selectedFile.path);
+      setValue(content);
+      setLanguage(language);
     }
 
-    loadFile();
-  }, [selectedFile, editorRef]);
+    loadModel();
+  }, [selectedFile]);
 
   return (
-    <Editor
-      height="100%"
+    <MonacoEditor
+      path={path}
+      value={value}
       language={language}
-      onMount={(editor) => (editorRef.current = editor)}
-      onChange={(value) => {
-        if (selectedFile && editorRef.current) {
-          selectedFile.fileHandle.createWritable().then((writer) => {
-            writer.write(value ?? "");
-            writer.close();
-          });
-        }
-      }}
+      onValueChange={(value) => setValue(value)}
     />
   );
-}
+});
+
+export default WebTeXEditor;

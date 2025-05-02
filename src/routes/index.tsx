@@ -1,10 +1,17 @@
 import { AppSidebar } from "@/components/AppSidebar";
 import { Button } from "@/components/ui/button";
-import WebTeXEditor from "@/components/WebTeXEditor";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import WebTeXEditor, {
+  type WebTeXEditorHandle,
+} from "@/components/WebTeXEditor";
 import { WorkspaceContext, type SelectedFile } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { LoaderIcon } from "lucide-react";
+import { BlocksIcon, CommandIcon, LoaderIcon, SaveIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import { usePdfTeXEngine } from "../hooks/usePdfTeXEngine";
 
@@ -15,7 +22,7 @@ export const Route = createFileRoute("/")({
 function App() {
   const [selectedFile, setSelectedPath] = useState<SelectedFile | null>(null);
 
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<WebTeXEditorHandle | null>(null);
 
   const engine = usePdfTeXEngine();
 
@@ -25,20 +32,25 @@ function App() {
         throw new Error("Engine not loaded yet.");
       }
 
-      const latexCode = editorRef.current.getValue();
-
-      console.log(latexCode);
+      const latexCode = editorRef.current?.getContent();
 
       engine.writeMemFSFile("main.tex", latexCode);
       engine.setEngineMainFile("main.tex");
-      const r = await engine.compileLaTeX();
 
-      if (r.pdf) {
-        const pdfBlob = new Blob([r.pdf], { type: "application/pdf" });
+      const result = await engine.compileLaTeX();
+
+      if (result.pdf) {
+        const pdfBlob = new Blob([result.pdf], { type: "application/pdf" });
         return URL.createObjectURL(pdfBlob);
       } else {
-        throw new Error(r.log);
+        throw new Error(result.log);
       }
+    },
+  });
+
+  const saveFileMutation = useMutation({
+    mutationFn: async () => {
+      await editorRef.current?.saveFile();
     },
   });
 
@@ -46,27 +58,51 @@ function App() {
     <WorkspaceContext.Provider value={{ selectedFile, setSelectedPath }}>
       <AppSidebar />
 
-      <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-50">
-        <div className="flex flex-row items-center">
-          <div className="flex-1"></div>
+      <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-100">
+        <div className="flex flex-row items-center bg-white p-2 rounded-md gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => saveFileMutation.mutate()}
+          >
+            {saveFileMutation.isPending ? (
+              <LoaderIcon className="animate-spin" />
+            ) : (
+              <SaveIcon />
+            )}
+            Save
+            <span className="text-xs text-muted-foreground uppercase inline-flex flex-row items-center">
+              <CommandIcon className="size-3 mr-0.5" /> S
+            </span>
+          </Button>
 
           <Button
             onClick={() => compilePdf.mutate()}
             disabled={!engine}
             variant="default"
+            size="sm"
           >
-            {compilePdf.isPending && (
-              <LoaderIcon className="animate-spin mr-2" />
+            {compilePdf.isPending ? (
+              <LoaderIcon className="animate-spin" />
+            ) : (
+              <BlocksIcon />
             )}
             Compile
+            <span className="text-xs text-muted-foreground uppercase inline-flex flex-row items-center">
+              <CommandIcon className="size-3 mr-0.5" /> P
+            </span>
           </Button>
         </div>
 
-        <div className="flex-1 flex flex-row gap-4">
-          <div className="flex-1 bg-white shadow-md rounded-lg p-4">
-            <WebTeXEditor editorRef={editorRef} />
-          </div>
-          <div className="flex-1 flex bg-white shadow-md rounded-lg overflow-hidden justify-center items-center">
+        <ResizablePanelGroup
+          className="flex flex-row gap-2"
+          direction="horizontal"
+        >
+          <ResizablePanel className="bg-white rounded-md p-4">
+            <WebTeXEditor ref={editorRef} />
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel className="flex bg-white rounded-md overflow-hidden justify-center items-center">
             {compilePdf.isSuccess ? (
               <iframe
                 src={compilePdf.data}
@@ -79,8 +115,8 @@ function App() {
             ) : (
               <span>No PDF available</span>
             )}
-          </div>
-        </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </main>
     </WorkspaceContext.Provider>
   );

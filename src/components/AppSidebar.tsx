@@ -18,6 +18,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -30,6 +31,8 @@ import {
   FileIcon,
   FilePlusIcon,
   FolderIcon,
+  MoreHorizontalIcon,
+  TrashIcon,
 } from "lucide-react";
 import { use, useRef, type PropsWithChildren } from "react";
 import { AppSidebarHeader } from "./AppSidebarHeader";
@@ -38,6 +41,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 
 export function AppSidebar() {
   const opfsQuery = useOpfs();
@@ -73,6 +82,21 @@ export function AppSidebar() {
     },
   });
 
+  const deleteFileMutation = useMutation({
+    mutationFn: async ({
+      parentHandle,
+      name,
+    }: {
+      parentHandle: FileSystemDirectoryHandle;
+      name: string;
+    }) => {
+      await parentHandle.removeEntry(name, { recursive: true });
+    },
+    onSuccess: () => {
+      opfsQuery.refetch();
+    },
+  });
+
   return (
     <Sidebar collapsible="icon">
       <AppSidebarHeader />
@@ -101,7 +125,14 @@ export function AppSidebar() {
 
               {opfsQuery.isSuccess &&
                 opfsQuery.data.files.map((item, index) => (
-                  <Tree key={index} item={item} />
+                  <Tree
+                    key={index}
+                    item={item}
+                    parentHandle={opfsQuery.data.root}
+                    onDeleteItem={(parentHandle, name) =>
+                      deleteFileMutation.mutate({ parentHandle, name })
+                    }
+                  />
                 ))}
             </SidebarMenu>
           </SidebarGroupContent>
@@ -112,23 +143,58 @@ export function AppSidebar() {
   );
 }
 
-function Tree({ item }: { item: TreeItem }) {
+function Tree({
+  item,
+  parentHandle,
+  onDeleteItem,
+}: {
+  item: TreeItem;
+  parentHandle: FileSystemDirectoryHandle;
+  onDeleteItem: (parentHandle: FileSystemDirectoryHandle, name: string) => void;
+}) {
   const name = item.path.split("/").pop() ?? "";
 
   if (item.type === "file") {
     const context = use(WorkspaceContext);
 
     return (
-      <SidebarMenuButton
-        isActive={context.selectedFile?.path === item.path}
-        className="data-[active=true]:bg-transparent"
-        onClick={() =>
-          context.setSelectedPath({ path: item.path, fileHandle: item.handle })
-        }
-      >
-        <FileIcon />
-        {name}
-      </SidebarMenuButton>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          isActive={context.selectedFile?.path === item.path}
+          className="flex flex-row items-center"
+          onClick={() =>
+            context.setSelectedPath({
+              path: item.path,
+              fileHandle: item.handle,
+            })
+          }
+        >
+          <FileIcon />
+          <span>{name}</span>
+
+          <div className="flex-1"></div>
+        </SidebarMenuButton>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuAction>
+              <MoreHorizontalIcon />
+            </SidebarMenuAction>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem>Rename File</DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => {
+                const name = item.path.split("/").pop() ?? "";
+                onDeleteItem(parentHandle, name);
+              }}
+            >
+              Delete File
+              <TrashIcon className="ml-2 h-4 w-4" />
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
     );
   }
 
@@ -148,11 +214,35 @@ function Tree({ item }: { item: TreeItem }) {
         <CollapsibleContent>
           <SidebarMenuSub>
             {item.children.map((subItem, index) => (
-              <Tree key={index} item={subItem} />
+              <Tree
+                key={index}
+                item={subItem}
+                parentHandle={item.handle}
+                onDeleteItem={onDeleteItem}
+              />
             ))}
           </SidebarMenuSub>
         </CollapsibleContent>
       </Collapsible>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <SidebarMenuAction>
+            <MoreHorizontalIcon />
+          </SidebarMenuAction>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => {
+              const name = item.path.split("/").pop() ?? "";
+              onDeleteItem(parentHandle, name);
+            }}
+          >
+            Delete Folder
+            <TrashIcon className="ml-2 h-4 w-4" />
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </SidebarMenuItem>
   );
 }
