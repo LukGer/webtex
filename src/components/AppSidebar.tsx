@@ -98,7 +98,7 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <AppSidebarHeader />
       <SidebarContent>
         <SidebarGroup>
@@ -202,7 +202,7 @@ function Tree({
     <SidebarMenuItem>
       <Collapsible
         className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
-        defaultOpen={name === "components" || name === "ui"}
+        defaultOpen={true}
       >
         <CollapsibleTrigger asChild>
           <SidebarMenuButton>
@@ -262,12 +262,12 @@ function AddFileDialog(
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
-              Name
+              Path
             </Label>
             <Input
               ref={inputRef}
               id="name"
-              placeholder="File name"
+              placeholder="path/to/file.tex"
               className="col-span-3"
             />
           </div>

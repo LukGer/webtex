@@ -9,7 +9,7 @@ type MonacoEditorProps = {
   value: string;
   language: string;
   onValueChange: (val: string) => void;
-  [key: string]: any; // For any other Monaco editor options
+  [key: string]: any;
 };
 
 const MonacoEditor: React.FC<MonacoEditorProps> = ({
@@ -35,8 +35,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         );
       }
 
-      editorRef.current?.setModel(model);
-      editorRef.current?.updateOptions(options);
+      editorRef.current.setModel(model);
+      editorRef.current.updateOptions(options);
     }
 
     return () => {
