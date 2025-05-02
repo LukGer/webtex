@@ -70,10 +70,10 @@ export interface SelectedFile {
 
 export interface WorkspaceContext {
   selectedFile: SelectedFile | null;
-  setSelectedPath: (path: SelectedFile | null) => void;
+  setSelectedFile: (path: SelectedFile | null) => void;
 }
 
 export const WorkspaceContext = createContext<WorkspaceContext>({
   selectedFile: null,
-  setSelectedPath: () => {},
+  setSelectedFile: () => {},
 });

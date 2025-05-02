@@ -163,7 +163,7 @@ function Tree({
           isActive={context.selectedFile?.path === item.path}
           className="flex flex-row items-center"
           onClick={() =>
-            context.setSelectedPath({
+            context.setSelectedFile({
               path: item.path,
               fileHandle: item.handle,
             })

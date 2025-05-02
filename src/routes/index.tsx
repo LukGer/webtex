@@ -6,7 +6,6 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Toggle } from "@/components/ui/toggle";
 import {
   Tooltip,
   TooltipContent,
@@ -37,7 +36,8 @@ export const Route = createFileRoute("/")({
 });
 
 function App() {
-  const [selectedFile, setSelectedPath] = useState<SelectedFile | null>(null);
+  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+
   const [wordWrap, setWordWrap] = useState(false);
 
   const editorRef = useRef<WebTeXEditorHandle | null>(null);
@@ -100,7 +100,9 @@ function App() {
   });
 
   return (
-    <WorkspaceContext.Provider value={{ selectedFile, setSelectedPath }}>
+    <WorkspaceContext.Provider
+      value={{ selectedFile: selectedFile, setSelectedFile }}
+    >
       <AppSidebar />
 
       <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-100">
@@ -110,13 +112,22 @@ function App() {
         >
           <ResizablePanel className="bg-white rounded-md p-4 flex flex-col gap-4">
             <div className="flex flex-row items-center">
-              <Toggle
-                onPressedChange={(toggled) => {
-                  sidebar.setOpen(toggled);
-                }}
-              >
-                {sidebar.open ? <SidebarCloseIcon /> : <SidebarOpenIcon />}
-              </Toggle>
+              <Tooltip delayDuration={300}>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => {
+                      sidebar.toggleSidebar();
+                    }}
+                  >
+                    {sidebar.open ? <SidebarCloseIcon /> : <SidebarOpenIcon />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="flex flex-row items-center gap-2">
+                  {sidebar.open ? "Close" : "Open"} Sidebar
+                </TooltipContent>
+              </Tooltip>
 
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
@@ -142,13 +153,15 @@ function App() {
 
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
-                  <Toggle
-                    onPressedChange={(toggled) => {
-                      setWordWrap(toggled);
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setWordWrap((prev) => !prev);
                     }}
                   >
                     {wordWrap ? <WrapTextIcon /> : <AlignJustifyIcon />}
-                  </Toggle>
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Toggle Word Wrap</p>
