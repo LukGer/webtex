@@ -1,4 +1,4 @@
-import { WorkspaceContext } from "@/utils/files";
+import { getSelectedFile, WorkspaceContext } from "@/utils/files";
 import { SidebarIcon } from "lucide-react";
 import {
   forwardRef,
@@ -32,7 +32,9 @@ const EXTENSIONS_MAP = {
 
 const WebTeXEditor = forwardRef<WebTeXEditorHandle, WebTeXEditorProps>(
   ({ wordWrap }, ref) => {
-    const { selectedFile } = useContext(WorkspaceContext);
+    const { selectedPath, files } = useContext(WorkspaceContext);
+
+    const selectedFile = getSelectedFile(files, selectedPath);
 
     const [path, setPath] = useState<string>("");
     const [value, setValue] = useState<string>("");

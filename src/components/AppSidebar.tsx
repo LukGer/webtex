@@ -31,10 +31,12 @@ import {
   FileIcon,
   FilePlusIcon,
   FolderIcon,
+  FolderPlusIcon,
   MoreHorizontalIcon,
   TrashIcon,
+  UploadIcon,
 } from "lucide-react";
-import { use, useRef, type PropsWithChildren } from "react";
+import { use, useRef, useState, type PropsWithChildren } from "react";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import {
   Collapsible,
@@ -49,6 +51,8 @@ import {
 } from "./ui/dropdown-menu";
 
 export function AppSidebar() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const opfsQuery = useOpfs();
 
   const addFileMutation = useMutation({
@@ -97,49 +101,116 @@ export function AppSidebar() {
     },
   });
 
+  const uploadFileMutation = useMutation({
+    mutationFn: async ({ folder }: { folder: FileSystemDirectoryHandle }) => {
+      const [fileHandle] = await window.showOpenFilePicker({
+        multiple: false,
+      });
+
+      const file = await fileHandle.getFile();
+      const writable = await folder.getFileHandle(file.name, {
+        create: true,
+      });
+      const writableStream = await writable.createWritable();
+      await writableStream.write(file);
+      await writableStream.close();
+    },
+    onSuccess: () => {
+      opfsQuery.refetch();
+    },
+  });
+
+  const createFolderMutation = useMutation({
+    mutationFn: async ({
+      parentHandle,
+      name,
+    }: {
+      parentHandle: FileSystemDirectoryHandle;
+      name: string;
+    }) => {
+      await parentHandle.getDirectoryHandle(name, { create: true });
+    },
+    onSuccess: () => {
+      opfsQuery.refetch();
+    },
+  });
+
   return (
-    <Sidebar collapsible="offcanvas">
-      <AppSidebarHeader />
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarGroupLabel>Files</SidebarGroupLabel>
-            <SidebarMenu>
-              <AddFileDialog
-                onSubmit={(path) => {
-                  if (!opfsQuery.isSuccess) return;
+    <>
+      <Sidebar collapsible="offcanvas">
+        <AppSidebarHeader />
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarGroupLabel>Files</SidebarGroupLabel>
 
-                  addFileMutation.mutate({
-                    root: opfsQuery.data.root,
-                    path,
-                  });
-                }}
-              >
-                <SidebarMenuButton>
-                  <FilePlusIcon />
-                  New File
-                </SidebarMenuButton>
-              </AddFileDialog>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <SidebarMenuAction>
+                        <MoreHorizontalIcon />
+                      </SidebarMenuAction>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+                        New File
+                        <div className="flex-1"></div>
+                        <FilePlusIcon className="size-4" />
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          if (!opfsQuery.isSuccess) return;
+                          uploadFileMutation.mutate({
+                            folder: opfsQuery.data.root,
+                          });
+                        }}
+                      >
+                        Upload File
+                        <div className="flex-1"></div>
+                        <UploadIcon className="size-4" />
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </SidebarMenuItem>
 
-              <hr />
+                <hr />
 
-              {opfsQuery.isSuccess &&
-                opfsQuery.data.files.map((item, index) => (
-                  <Tree
-                    key={index}
-                    item={item}
-                    parentHandle={opfsQuery.data.root}
-                    onDeleteItem={(parentHandle, name) =>
-                      deleteFileMutation.mutate({ parentHandle, name })
-                    }
-                  />
-                ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter />
-    </Sidebar>
+                {opfsQuery.isSuccess &&
+                  opfsQuery.data.files.map((item, index) => (
+                    <Tree
+                      key={index}
+                      item={item}
+                      parentHandle={opfsQuery.data.root}
+                      onDeleteItem={(parentHandle, name) =>
+                        deleteFileMutation.mutate({ parentHandle, name })
+                      }
+                      onUploadFile={(folder) => {
+                        uploadFileMutation.mutate({ folder });
+                      }}
+                      onCreateFolder={(folder) => {}}
+                    />
+                  ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter />
+      </Sidebar>
+      <AddFileDialog
+        open={dialogOpen}
+        onSubmit={(path) => {
+          setDialogOpen(false);
+
+          if (!opfsQuery.isSuccess) return;
+
+          addFileMutation.mutate({
+            root: opfsQuery.data.root,
+            path,
+          });
+        }}
+      ></AddFileDialog>
+    </>
   );
 }
 
@@ -147,10 +218,14 @@ function Tree({
   item,
   parentHandle,
   onDeleteItem,
+  onUploadFile,
+  onCreateFolder,
 }: {
   item: TreeItem;
   parentHandle: FileSystemDirectoryHandle;
   onDeleteItem: (parentHandle: FileSystemDirectoryHandle, name: string) => void;
+  onUploadFile: (folder: FileSystemDirectoryHandle) => void;
+  onCreateFolder: (folder: FileSystemDirectoryHandle) => void;
 }) {
   const name = item.path.split("/").pop() ?? "";
 
@@ -160,14 +235,9 @@ function Tree({
     return (
       <SidebarMenuItem>
         <SidebarMenuButton
-          isActive={context.selectedFile?.path === item.path}
+          isActive={context.selectedPath === item.path}
           className="flex flex-row items-center"
-          onClick={() =>
-            context.setSelectedFile({
-              path: item.path,
-              fileHandle: item.handle,
-            })
-          }
+          onClick={() => context.setSelectedPath(item.path)}
         >
           <FileIcon />
           <span>{name}</span>
@@ -219,6 +289,8 @@ function Tree({
                 item={subItem}
                 parentHandle={item.handle}
                 onDeleteItem={onDeleteItem}
+                onUploadFile={onUploadFile}
+                onCreateFolder={onCreateFolder}
               />
             ))}
           </SidebarMenuSub>
@@ -232,6 +304,24 @@ function Tree({
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem
+            onClick={() => {
+              onUploadFile(item.handle);
+            }}
+          >
+            Upload File
+            <div className="flex-1"></div>
+            <UploadIcon className="h-4 w-4" />
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onCreateFolder(item.handle);
+            }}
+          >
+            Create Folder
+            <div className="flex-1"></div>
+            <FolderPlusIcon className="h-4 w-4" />
+          </DropdownMenuItem>
+          <DropdownMenuItem
             variant="destructive"
             onClick={() => {
               const name = item.path.split("/").pop() ?? "";
@@ -239,7 +329,8 @@ function Tree({
             }}
           >
             Delete Folder
-            <TrashIcon className="ml-2 h-4 w-4" />
+            <div className="flex-1"></div>
+            <TrashIcon className="h-4 w-4" />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -248,12 +339,12 @@ function Tree({
 }
 
 function AddFileDialog(
-  props: PropsWithChildren<{ onSubmit: (name: string) => void }>
+  props: PropsWithChildren<{ open: boolean; onSubmit: (name: string) => void }>
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <Dialog>
+    <Dialog open={props.open}>
       <DialogTrigger asChild>{props.children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

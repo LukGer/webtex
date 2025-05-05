@@ -1,4 +1,5 @@
 import { AppSidebar } from "@/components/AppSidebar";
+import { FileSelectionDialog } from "@/components/FileSelectionDialog";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -15,7 +16,7 @@ import WebTeXEditor, {
   type WebTeXEditorHandle,
 } from "@/components/WebTeXEditor";
 import { useOpfs } from "@/hooks/use-opfs";
-import { WorkspaceContext, type SelectedFile } from "@/utils/files";
+import { WorkspaceContext } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -28,6 +29,7 @@ import {
   SidebarOpenIcon,
   WrapTextIcon,
 } from "lucide-react";
+import { useQueryState } from "nuqs";
 import { useRef, useState } from "react";
 import { usePdfTeXEngine } from "../hooks/usePdfTeXEngine";
 
@@ -36,7 +38,7 @@ export const Route = createFileRoute("/")({
 });
 
 function App() {
-  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+  const [selectedPath, setSelectedPath] = useQueryState("path");
 
   const [wordWrap, setWordWrap] = useState(false);
 
@@ -99,9 +101,26 @@ function App() {
     },
   });
 
+  const handleCommand = async (command: string, payload: any) => {
+    switch (command) {
+      case "compile": {
+        compilePdf.mutate();
+        break;
+      }
+      case "open": {
+        const path = payload as string;
+        setSelectedPath(path);
+      }
+    }
+  };
+
   return (
     <WorkspaceContext.Provider
-      value={{ selectedFile: selectedFile, setSelectedFile }}
+      value={{
+        selectedPath,
+        setSelectedPath,
+        files: opfsQuery.data?.files ?? [],
+      }}
     >
       <AppSidebar />
 
@@ -209,6 +228,9 @@ function App() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </main>
+      <FileSelectionDialog
+        onCommandSelect={(command, payload) => handleCommand(command, payload)}
+      />
     </WorkspaceContext.Provider>
   );
 }
