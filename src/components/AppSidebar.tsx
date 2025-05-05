@@ -188,7 +188,12 @@ export function AppSidebar() {
                       onUploadFile={(folder) => {
                         uploadFileMutation.mutate({ folder });
                       }}
-                      onCreateFolder={(folder) => {}}
+                      onCreateFolder={(folder) => {
+                        createFolderMutation.mutate({
+                          parentHandle: folder,
+                          name: "New Folder",
+                        });
+                      }}
                     />
                   ))}
               </SidebarMenu>
