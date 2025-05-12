@@ -1,6 +1,6 @@
-import * as monaco from "monaco-editor";
+import type * as monaco from "monaco-editor";
 
-export const BIBTEX: monaco.languages.IMonarchLanguage = {
+export const BIBTEX_LANG: monaco.languages.IMonarchLanguage = {
   displayName: "BibTeX",
   name: "bibtex",
   mimeTypes: ["text/bibtex"],

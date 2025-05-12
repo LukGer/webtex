@@ -1,5 +1,9 @@
 import { AppSidebar } from "@/components/AppSidebar";
 import { FileSelectionDialog } from "@/components/FileSelectionDialog";
+import PDFViewer from "@/components/PdfViewer";
+import WebTeXEditor, {
+  type WebTeXEditorHandle,
+} from "@/components/WebTeXEditor";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -12,9 +16,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import WebTeXEditor, {
-  type WebTeXEditorHandle,
-} from "@/components/WebTeXEditor";
 import { useOpfs } from "@/hooks/use-opfs";
 import { WorkspaceContext } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
@@ -72,10 +73,10 @@ function App() {
   };
 
   const compilePdf = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (): Promise<ArrayBuffer> => {
       const root = opfsQuery.data?.root;
 
-      if (!engine || !root) {
+      if (!engine?.isReady() || !root) {
         throw new Error("Engine or OPFS not ready yet.");
       }
 
@@ -86,12 +87,11 @@ function App() {
       const result = await engine.compileLaTeX();
 
       if (result.pdf) {
-        const pdfBlob = new Blob([result.pdf], { type: "application/pdf" });
-        return URL.createObjectURL(pdfBlob);
-      } else {
-        console.log(result);
-        throw new Error(result.log);
+        return result.pdf.buffer as ArrayBuffer;
       }
+
+      console.log(result);
+      throw new Error(result.log);
     },
   });
 
@@ -101,15 +101,15 @@ function App() {
     },
   });
 
-  const handleCommand = async (command: string, payload: any) => {
+  const handleCommand = async (command: string, payload?: string) => {
     switch (command) {
       case "compile": {
         compilePdf.mutate();
         break;
       }
       case "open": {
-        const path = payload as string;
-        setSelectedPath(path);
+        const path = payload;
+        setSelectedPath(path!);
       }
     }
   };
@@ -187,7 +187,7 @@ function App() {
                 </TooltipContent>
               </Tooltip>
 
-              <div className="flex-1"></div>
+              <div className="flex-1" />
 
               <Button
                 onClick={() => compilePdf.mutate()}
@@ -211,12 +211,13 @@ function App() {
           <ResizableHandle />
           <ResizablePanel className="flex bg-white rounded-md overflow-hidden justify-center items-center gap-2">
             {compilePdf.isSuccess ? (
-              <iframe
-                src={compilePdf.data}
-                className="w-full h-full"
-                style={{ border: "none" }}
-                title="PDF Preview"
-              />
+              // <iframe
+              //   src={compilePdf.data}
+              //   className="w-full h-full"
+              //   style={{ border: "none" }}
+              //   title="PDF Preview"
+              // />
+              <PDFViewer pdf={compilePdf.data} />
             ) : compilePdf.isError ? (
               <span className="text-red-500">{compilePdf.error.message}</span>
             ) : (

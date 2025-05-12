@@ -24,7 +24,7 @@ import {
   SidebarMenuSub,
 } from "@/components/ui/sidebar";
 import { useOpfs } from "@/hooks/use-opfs";
-import { WorkspaceContext, type TreeItem } from "@/utils/files";
+import { type TreeItem, WorkspaceContext } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
 import {
   ChevronRightIcon,
@@ -36,7 +36,7 @@ import {
   TrashIcon,
   UploadIcon,
 } from "lucide-react";
-import { use, useRef, useState, type PropsWithChildren } from "react";
+import { type PropsWithChildren, use, useRef, useState } from "react";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import {
   Collapsible,
@@ -155,7 +155,7 @@ export function AppSidebar() {
                     <DropdownMenuContent>
                       <DropdownMenuItem onClick={() => setDialogOpen(true)}>
                         New File
-                        <div className="flex-1"></div>
+                        <div className="flex-1" />
                         <FilePlusIcon className="size-4" />
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -167,7 +167,7 @@ export function AppSidebar() {
                         }}
                       >
                         Upload File
-                        <div className="flex-1"></div>
+                        <div className="flex-1" />
                         <UploadIcon className="size-4" />
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -177,9 +177,9 @@ export function AppSidebar() {
                 <hr />
 
                 {opfsQuery.isSuccess &&
-                  opfsQuery.data.files.map((item, index) => (
+                  opfsQuery.data.files.map((item) => (
                     <Tree
-                      key={index}
+                      key={item.path}
                       item={item}
                       parentHandle={opfsQuery.data.root}
                       onDeleteItem={(parentHandle, name) =>
@@ -214,7 +214,7 @@ export function AppSidebar() {
             path,
           });
         }}
-      ></AddFileDialog>
+      />
     </>
   );
 }
@@ -247,7 +247,7 @@ function Tree({
           <FileIcon />
           <span>{name}</span>
 
-          <div className="flex-1"></div>
+          <div className="flex-1" />
         </SidebarMenuButton>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -288,9 +288,9 @@ function Tree({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
-            {item.children.map((subItem, index) => (
+            {item.children.map((subItem) => (
               <Tree
-                key={index}
+                key={subItem.path}
                 item={subItem}
                 parentHandle={item.handle}
                 onDeleteItem={onDeleteItem}
@@ -314,7 +314,7 @@ function Tree({
             }}
           >
             Upload File
-            <div className="flex-1"></div>
+            <div className="flex-1" />
             <UploadIcon className="h-4 w-4" />
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -323,7 +323,7 @@ function Tree({
             }}
           >
             Create Folder
-            <div className="flex-1"></div>
+            <div className="flex-1" />
             <FolderPlusIcon className="h-4 w-4" />
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -334,7 +334,7 @@ function Tree({
             }}
           >
             Delete Folder
-            <div className="flex-1"></div>
+            <div className="flex-1" />
             <TrashIcon className="h-4 w-4" />
           </DropdownMenuItem>
         </DropdownMenuContent>

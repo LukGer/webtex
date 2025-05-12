@@ -23,11 +23,11 @@ export async function openFolderAndLoadFiles() {
   files.sort((a, b) => {
     if (a.type === "folder" && b.type === "file") {
       return -1;
-    } else if (a.type === "file" && b.type === "folder") {
-      return 1;
-    } else {
-      return a.path.localeCompare(b.path);
     }
+    if (a.type === "file" && b.type === "folder") {
+      return 1;
+    }
+    return a.path.localeCompare(b.path);
   });
 
   return { root, files };
@@ -66,13 +66,13 @@ async function loadFolderItems(
   files.sort((a, b) => {
     if (a.type === "folder" && b.type === "file") {
       return -1;
-    } else if (a.type === "file" && b.type === "folder") {
-      return 1;
-    } else {
-      const aName = a.path.split("/").pop() || "";
-      const bName = b.path.split("/").pop() || "";
-      return aName.localeCompare(bName);
     }
+    if (a.type === "file" && b.type === "folder") {
+      return 1;
+    }
+    const aName = a.path.split("/").pop() || "";
+    const bName = b.path.split("/").pop() || "";
+    return aName.localeCompare(bName);
   });
 
   return files;
@@ -104,7 +104,7 @@ function findItemByPath(
       return item;
     }
     if (item.type === "folder") {
-      if (targetPath.startsWith(item.path + "/")) {
+      if (targetPath.startsWith(`${item.path}/`)) {
         const foundInChildren = findItemByPath(item.children, targetPath);
         if (foundInChildren) {
           return foundInChildren;

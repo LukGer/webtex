@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@monaco-editor/react": "^4.7.0-rc.0",
     "@radix-ui/react-collapsible": "^1.1.8",
     "@radix-ui/react-dialog": "^1.1.11",
@@ -50,5 +51,8 @@
     "vite": "^6.1.0",
     "vitest": "^3.0.5",
     "web-vitals": "^4.2.4"
-  }
+  },
+  "trustedDependencies": [
+    "@biomejs/biome"
+  ]
 }

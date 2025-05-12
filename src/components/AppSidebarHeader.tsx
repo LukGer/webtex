@@ -1,7 +1,5 @@
 "use client";
 
-import { FileCode2Icon } from "lucide-react";
-
 import {
   SidebarHeader,
   SidebarMenu,
@@ -9,6 +7,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { FileCode2Icon } from "lucide-react";
 
 export function AppSidebarHeader() {
   const { toggleSidebar } = useSidebar();

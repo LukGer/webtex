@@ -1,7 +1,7 @@
-import { BIBTEX } from "@/utils/bibtex";
-import { LATEX } from "@/utils/latex";
+import { BIBTEX_LANG } from "@/utils/bibtex";
+import { LATEX_COMPLETIONS, LATEX_LANG } from "@/utils/latex";
 import { Editor } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import type * as monaco from "monaco-editor";
 import * as React from "react";
 
 type MonacoEditorProps = {
@@ -9,7 +9,7 @@ type MonacoEditorProps = {
   value: string;
   language: string;
   onValueChange: (val: string) => void;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 const MonacoEditor: React.FC<MonacoEditorProps> = ({
@@ -24,53 +24,36 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   );
 
   React.useEffect(() => {
-    if (editorRef.current) {
-      let model = monaco.editor.getModel(monaco.Uri.parse(path));
-
-      if (!model) {
-        model = monaco.editor.createModel(
-          value,
-          language,
-          monaco.Uri.parse(path)
-        );
-      }
-
-      editorRef.current.setModel(model);
-      editorRef.current.updateOptions(options);
-    }
-
     return () => {
-      editorRef.current?.dispose();
-    };
-  }, [editorRef]);
-
-  // Update on prop changes
-  React.useEffect(() => {
-    const editor = editorRef.current;
-    const model = editor?.getModel();
-
-    if (editor && model) {
-      editor.updateOptions(options);
-
-      if (value !== model.getValue()) {
-        model.setValue(value);
+      try {
+        editorRef.current?.getModel()?.dispose();
+      } catch (error) {
+        console.error("Error cleaning up Monaco editor:", error);
       }
-    }
-  }, [value, options]);
+    };
+  }, []);
 
   return (
     <Editor
       beforeMount={(mon) => {
         mon.languages.register({ id: "latex" });
         mon.languages.register({ id: "bibtex" });
-
-        mon.languages.setMonarchTokensProvider("latex", LATEX);
-        mon.languages.setMonarchTokensProvider("bibtex", BIBTEX);
+        mon.languages.setMonarchTokensProvider("latex", LATEX_LANG);
+        mon.languages.setMonarchTokensProvider("bibtex", BIBTEX_LANG);
+        mon.languages.registerCompletionItemProvider(
+          "latex",
+          LATEX_COMPLETIONS
+        );
       }}
-      onMount={(editor) => (editorRef.current = editor)}
-      language={language}
+      onMount={(editor) => {
+        editorRef.current = editor;
+      }}
+      path={path}
+      defaultValue={value}
+      defaultLanguage={language}
       className="w-full h-full"
       onChange={(value) => onValueChange(value ?? "")}
+      options={options}
     />
   );
 };

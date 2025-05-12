@@ -1,8 +1,5 @@
 "use client";
 
-import { BlocksIcon, FileIcon } from "lucide-react";
-import * as React from "react";
-
 import {
   CommandDialog,
   CommandEmpty,
@@ -14,9 +11,11 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { WorkspaceContext } from "@/utils/files";
+import { BlocksIcon, FileIcon } from "lucide-react";
+import * as React from "react";
 
 export interface FileSelectionDialogProps {
-  onCommandSelect: (command: string, payload?: any) => void;
+  onCommandSelect: (command: string, payload?: string) => void;
 }
 
 export function FileSelectionDialog(props: FileSelectionDialogProps) {
@@ -36,7 +35,7 @@ export function FileSelectionDialog(props: FileSelectionDialogProps) {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const onCommandSelect = (command: string, payload?: any) => {
+  const onCommandSelect = (command: string, payload?: string) => {
     setOpen(false);
     props.onCommandSelect(command, payload);
   };

@@ -1,6 +1,6 @@
 import * as monaco from "monaco-editor";
 
-export const LATEX: monaco.languages.IMonarchLanguage = {
+export const LATEX_LANG: monaco.languages.IMonarchLanguage = {
   displayName: "Latex",
   name: "latex",
   mimeTypes: ["text/latex", "text/tex"],
@@ -284,5 +284,89 @@ export const LATEX: monaco.languages.IMonarchLanguage = {
       ["[ \\t\\r\\n]+", "white"],
       ["%.*$", "comment"],
     ],
+  },
+};
+
+export const LATEX_COMPLETIONS: monaco.languages.CompletionItemProvider = {
+  triggerCharacters: ["\\", "$"],
+
+  provideCompletionItems: (model, position, context) => {
+    const lineNumber = position.lineNumber;
+    const column = position.column;
+
+    const startColumn = column - 1;
+
+    const backslashSuggestions: monaco.languages.CompletionItem[] = [
+      {
+        label: "\\textbf",
+        kind: monaco.languages.CompletionItemKind.Function,
+        insertText: "\\textbf{${1:text}}",
+        insertTextRules:
+          monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation: "Bold text",
+        range: {
+          startLineNumber: lineNumber,
+          endLineNumber: lineNumber,
+          startColumn,
+          endColumn: column,
+        },
+      },
+      {
+        label: "\\frac",
+        kind: monaco.languages.CompletionItemKind.Function,
+        insertText: "\\frac{${1:numerator}}{${2:denominator}}",
+        insertTextRules:
+          monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation: "Fraction",
+        range: {
+          startLineNumber: lineNumber,
+          endLineNumber: lineNumber,
+          startColumn,
+          endColumn: column,
+        },
+      },
+      {
+        label: "\\sqrt",
+        kind: monaco.languages.CompletionItemKind.Function,
+        insertText: "\\sqrt{${1:expression}}",
+        insertTextRules:
+          monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation: "Square root",
+        range: {
+          startLineNumber: lineNumber,
+          endLineNumber: lineNumber,
+          startColumn,
+          endColumn: column,
+        },
+      },
+    ];
+
+    const dollarSuggestions: monaco.languages.CompletionItem[] = [
+      {
+        label: "$$",
+        kind: monaco.languages.CompletionItemKind.Function,
+        insertText: "$${1:equation}$$",
+        insertTextRules:
+          monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+        documentation: "Display math mode",
+        range: {
+          startLineNumber: lineNumber,
+          endLineNumber: lineNumber,
+          startColumn: startColumn + 1,
+          endColumn: column,
+        },
+      },
+    ];
+
+    const trigger = context?.triggerCharacter;
+
+    return {
+      suggestions:
+        trigger === "\\"
+          ? backslashSuggestions
+          : trigger === "$"
+            ? dollarSuggestions
+            : [],
+    };
   },
 };

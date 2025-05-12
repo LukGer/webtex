@@ -1,4 +1,4 @@
-import { getSelectedFile, WorkspaceContext } from "@/utils/files";
+import { WorkspaceContext, getSelectedFile } from "@/utils/files";
 import { SidebarIcon } from "lucide-react";
 import {
   forwardRef,
@@ -39,6 +39,7 @@ const WebTeXEditor = forwardRef<WebTeXEditorHandle, WebTeXEditorProps>(
     const [path, setPath] = useState<string>("");
     const [value, setValue] = useState<string>("");
     const [language, setLanguage] = useState<string>("plaintext");
+    const [isLoading, setIsLoading] = useState(false);
 
     useImperativeHandle(ref, () => ({
       saveFile: async () => {
@@ -59,20 +60,30 @@ const WebTeXEditor = forwardRef<WebTeXEditorHandle, WebTeXEditorProps>(
       async function loadModel() {
         if (!selectedFile) return;
 
-        const file = await selectedFile.fileHandle.getFile();
-        const content = await file.text();
-        const extension = selectedFile.path.split(".").pop() || "";
-        const language =
-          EXTENSIONS_MAP[extension as keyof typeof EXTENSIONS_MAP] ||
-          "plaintext";
+        // Only reload if the path changed or file was saved
+        if (path === selectedFile.path) return;
 
-        setPath(selectedFile.path);
-        setValue(content);
-        setLanguage(language);
+        setIsLoading(true);
+        try {
+          const file = await selectedFile.fileHandle.getFile();
+          const content = await file.text();
+          const extension = selectedFile.path.split(".").pop() || "";
+          const language =
+            EXTENSIONS_MAP[extension as keyof typeof EXTENSIONS_MAP] ||
+            "plaintext";
+
+          setPath(selectedFile.path);
+          setValue(content);
+          setLanguage(language);
+        } catch (error) {
+          console.error("Failed to load file:", error);
+        } finally {
+          setIsLoading(false);
+        }
       }
 
       loadModel();
-    }, [selectedFile]);
+    }, [selectedFile, path]);
 
     return (
       <div className="h-full w-full relative">
@@ -86,7 +97,7 @@ const WebTeXEditor = forwardRef<WebTeXEditorHandle, WebTeXEditorProps>(
           path={path}
           value={value}
           language={language}
-          onValueChange={(value) => setValue(value)}
+          onValueChange={(newVal) => !isLoading && setValue(newVal)}
           minimap={{ enabled: false }}
           wordWrap={wordWrap ? "on" : "off"}
         />
