@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useRef, useState } from "react";
-import { usePdfTeXEngine } from "../hooks/usePdfTeXEngine";
+import { type PdfResult, usePdfTeXEngine } from "../hooks/usePdfTeXEngine";
 
 export const Route = createFileRoute("/")({
   component: App,
@@ -40,6 +40,7 @@ export const Route = createFileRoute("/")({
 
 function App() {
   const [selectedPath, setSelectedPath] = useQueryState("path");
+  const [mainFilePath, setMainFilePath] = useState<string | null>("main.tex");
 
   const [wordWrap, setWordWrap] = useState(false);
 
@@ -73,25 +74,29 @@ function App() {
   };
 
   const compilePdf = useMutation({
-    mutationFn: async (): Promise<ArrayBuffer> => {
+    mutationFn: async (): Promise<Uint8Array<ArrayBuffer>> => {
       const root = opfsQuery.data?.root;
+      const mailFilePath = mainFilePath;
 
-      if (!engine?.isReady() || !root) {
+      if (!engine?.isReady() || !root || !mailFilePath) {
         throw new Error("Engine or OPFS not ready yet.");
       }
 
       await syncOpfsToMemFs(root);
 
-      engine.setEngineMainFile("main.tex");
+      engine.setEngineMainFile(mainFilePath);
 
-      const result = await engine.compileLaTeX();
+      let result: PdfResult | undefined;
+      for (let i = 0; i < 3; i++) {
+        result = await engine.compileLaTeX();
+      }
 
-      if (result.pdf) {
-        return result.pdf.buffer as ArrayBuffer;
+      if (result?.pdf) {
+        return result.pdf;
       }
 
       console.log(result);
-      throw new Error(result.log);
+      throw new Error(result?.log ?? "Compilation failed");
     },
   });
 
@@ -120,11 +125,13 @@ function App() {
         selectedPath,
         setSelectedPath,
         files: opfsQuery.data?.files ?? [],
+        mainFilePath,
+        setMainFilePath,
       }}
     >
       <AppSidebar />
 
-      <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-100">
+      <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-100 max-h-screen">
         <ResizablePanelGroup
           className="flex flex-row gap-2"
           direction="horizontal"
@@ -191,7 +198,7 @@ function App() {
 
               <Button
                 onClick={() => compilePdf.mutate()}
-                disabled={!engine}
+                disabled={!engine || compilePdf.isPending}
                 variant="default"
                 size="sm"
               >
@@ -209,15 +216,9 @@ function App() {
             <WebTeXEditor ref={editorRef} wordWrap={wordWrap} />
           </ResizablePanel>
           <ResizableHandle />
-          <ResizablePanel className="flex bg-white rounded-md overflow-hidden justify-center items-center gap-2">
+          <ResizablePanel className="flex flex-col bg-white rounded-md">
             {compilePdf.isSuccess ? (
-              // <iframe
-              //   src={compilePdf.data}
-              //   className="w-full h-full"
-              //   style={{ border: "none" }}
-              //   title="PDF Preview"
-              // />
-              <PDFViewer pdf={compilePdf.data} />
+              <PDFViewer pdfData={compilePdf.data} />
             ) : compilePdf.isError ? (
               <span className="text-red-500">{compilePdf.error.message}</span>
             ) : (

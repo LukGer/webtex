@@ -1,41 +1,46 @@
-import { type SyntheticEvent, useState } from "react";
+import { useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import type { OnDocumentLoadSuccess } from "react-pdf/dist/esm/shared/types.js";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.mjs",
+  import.meta.url
+).toString();
 
-export default function PDFViewer({ pdf }: { pdf: ArrayBuffer }) {
+interface PdfViewerProps {
+  pdfData: Uint8Array<ArrayBuffer>;
+}
+
+export default function PDFViewer({ pdfData }: PdfViewerProps) {
+  const blob = new Blob([pdfData], { type: "application/pdf" });
+
   const [numPages, setNumPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
 
   const onLoadSuccess: OnDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
 
-  const onScroll = (event: SyntheticEvent<HTMLDivElement>) => {
-    const { scrollTop } = event.currentTarget;
-    const pageHeight = event.currentTarget.scrollHeight / numPages;
-    const currentPage = Math.floor(scrollTop / pageHeight) + 1;
-    setCurrentPage(currentPage);
-    console.log(`Current page: ${currentPage}`);
-  };
-
   return (
-    <div style={{ overflowY: "scroll", height: "100%" }}>
-      <Document
-        file={{ data: pdf }}
-        onLoadSuccess={onLoadSuccess}
-        onScroll={onScroll}
-      >
-        {Array.from(new Array(numPages ?? 0), (_, index) => (
-          <Page key={`page_${index + 1}`} pageNumber={index + 1} />
-        ))}
-      </Document>
-      <p>
-        Current Page: {currentPage}/{numPages}
-      </p>
+    <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-auto bg-gray-200">
+        <Document
+          key={URL.createObjectURL(blob)}
+          file={blob}
+          onLoadSuccess={onLoadSuccess}
+          className="flex flex-col items-center py-4"
+        >
+          {Array.from(new Array(numPages), (_, index) => (
+            <div
+              key={`page_${index + 1}`}
+              className={index < numPages - 1 ? "mb-4" : ""}
+            >
+              <Page pageNumber={index + 1} />
+            </div>
+          ))}
+        </Document>
+      </div>
     </div>
   );
 }

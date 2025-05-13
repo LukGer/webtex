@@ -87,12 +87,16 @@ export interface WorkspaceContext {
   files: TreeItem[];
   selectedPath: string | null;
   setSelectedPath: (path: string | null) => void;
+  mainFilePath: string | null;
+  setMainFilePath: (value: string | null) => void;
 }
 
 export const WorkspaceContext = createContext<WorkspaceContext>({
   files: [],
   selectedPath: null,
   setSelectedPath: () => {},
+  mainFilePath: null,
+  setMainFilePath: () => {},
 });
 
 function findItemByPath(

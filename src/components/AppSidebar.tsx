@@ -247,6 +247,10 @@ function Tree({
           <FileIcon />
           <span>{name}</span>
 
+          {item.path === context.mainFilePath && (
+            <div className="size-2 rounded-full rotate-45 bg-yellow-400" />
+          )}
+
           <div className="flex-1" />
         </SidebarMenuButton>
         <DropdownMenu>
