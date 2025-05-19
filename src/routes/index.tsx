@@ -1,6 +1,5 @@
 import { AppSidebar } from "@/components/AppSidebar";
 import { FileSelectionDialog } from "@/components/FileSelectionDialog";
-import PDFViewer from "@/components/PdfViewer";
 import WebTeXEditor, {
   type WebTeXEditorHandle,
 } from "@/components/WebTeXEditor";
@@ -32,6 +31,7 @@ import {
 } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { useRef, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { type PdfResult, usePdfTeXEngine } from "../hooks/usePdfTeXEngine";
 
 export const Route = createFileRoute("/")({
@@ -74,7 +74,7 @@ function App() {
   };
 
   const compilePdf = useMutation({
-    mutationFn: async (): Promise<Uint8Array<ArrayBuffer>> => {
+    mutationFn: async (): Promise<string> => {
       const root = opfsQuery.data?.root;
       const mailFilePath = mainFilePath;
 
@@ -92,7 +92,9 @@ function App() {
       }
 
       if (result?.pdf) {
-        return result.pdf;
+        return URL.createObjectURL(
+          new Blob([result.pdf], { type: "application/pdf" })
+        );
       }
 
       console.log(result);
@@ -119,6 +121,17 @@ function App() {
     }
   };
 
+  useHotkeys(
+    "meta+s",
+    (e) => {
+      e.preventDefault();
+      saveFileMutation.mutate();
+    },
+    {
+      enableOnFormTags: true,
+    }
+  );
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -131,7 +144,7 @@ function App() {
     >
       <AppSidebar />
 
-      <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-100 max-h-screen">
+      <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-100 max-h-screen overflow-x-hidden">
         <ResizablePanelGroup
           className="flex flex-row gap-2"
           direction="horizontal"
@@ -218,7 +231,11 @@ function App() {
           <ResizableHandle />
           <ResizablePanel className="flex flex-col bg-white rounded-md">
             {compilePdf.isSuccess ? (
-              <PDFViewer pdfData={compilePdf.data} />
+              <iframe
+                className="w-full h-full"
+                src={compilePdf.data}
+                title="PDF Viewer"
+              />
             ) : compilePdf.isError ? (
               <span className="text-red-500">{compilePdf.error.message}</span>
             ) : (

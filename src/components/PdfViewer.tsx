@@ -13,6 +13,11 @@ interface PdfViewerProps {
   pdfData: Uint8Array<ArrayBuffer>;
 }
 
+function toBase64(bytes: Uint8Array): string {
+  const binary = String.fromCharCode(...bytes);
+  return btoa(binary);
+}
+
 export default function PDFViewer({ pdfData }: PdfViewerProps) {
   const blob = new Blob([pdfData], { type: "application/pdf" });
 
@@ -24,9 +29,9 @@ export default function PDFViewer({ pdfData }: PdfViewerProps) {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-auto bg-gray-200">
+      <div className="flex-1 overflow-auto bg-gray-200 shadow-inner relative">
         <Document
-          key={URL.createObjectURL(blob)}
+          key={toBase64(pdfData)}
           file={blob}
           onLoadSuccess={onLoadSuccess}
           className="flex flex-col items-center py-4"

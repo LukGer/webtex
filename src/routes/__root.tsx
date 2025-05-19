@@ -8,19 +8,21 @@ import { NuqsAdapter } from "nuqs/adapters/react";
 const queryClient = new QueryClient();
 
 export const Route = createRootRoute({
-  component: () => (
-    <>
-      <TanStackRouterDevtools />
+  component: () => {
+    return (
+      <>
+        <TanStackRouterDevtools />
 
-      <NuqsAdapter>
-        <SidebarProvider>
-          <TooltipProvider>
-            <QueryClientProvider client={queryClient}>
-              <Outlet />
-            </QueryClientProvider>
-          </TooltipProvider>
-        </SidebarProvider>
-      </NuqsAdapter>
-    </>
-  ),
+        <NuqsAdapter>
+          <SidebarProvider>
+            <TooltipProvider>
+              <QueryClientProvider client={queryClient}>
+                <Outlet />
+              </QueryClientProvider>
+            </TooltipProvider>
+          </SidebarProvider>
+        </NuqsAdapter>
+      </>
+    );
+  },
 });
