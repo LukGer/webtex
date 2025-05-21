@@ -51,7 +51,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       path={path}
       defaultValue={value}
       defaultLanguage={language}
-      className="w-full h-full"
+      className="h-full w-full"
       onChange={(value) => onValueChange(value ?? "")}
       options={options}
     />

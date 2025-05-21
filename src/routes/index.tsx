@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/AppSidebar";
 import { FileSelectionDialog } from "@/components/FileSelectionDialog";
+import PDFViewer from "@/components/PdfViewer";
 import WebTeXEditor, {
   type WebTeXEditorHandle,
 } from "@/components/WebTeXEditor";
@@ -74,7 +75,7 @@ function App() {
   };
 
   const compilePdf = useMutation({
-    mutationFn: async (): Promise<string> => {
+    mutationFn: async (): Promise<Uint8Array<ArrayBuffer>> => {
       const root = opfsQuery.data?.root;
       const mailFilePath = mainFilePath;
 
@@ -92,9 +93,7 @@ function App() {
       }
 
       if (result?.pdf) {
-        return URL.createObjectURL(
-          new Blob([result.pdf], { type: "application/pdf" })
-        );
+        return result.pdf;
       }
 
       console.log(result);
@@ -144,12 +143,12 @@ function App() {
     >
       <AppSidebar />
 
-      <main className="flex-1 flex flex-col gap-4 p-4 bg-gray-100 max-h-screen overflow-x-hidden">
+      <main className="flex max-h-screen flex-1 flex-col gap-4 overflow-x-hidden bg-gray-100 p-4">
         <ResizablePanelGroup
           className="flex flex-row gap-2"
           direction="horizontal"
         >
-          <ResizablePanel className="bg-white rounded-md p-4 flex flex-col gap-4">
+          <ResizablePanel className="flex flex-col gap-4 rounded-md bg-white p-4">
             <div className="flex flex-row items-center">
               <Tooltip delayDuration={300}>
                 <TooltipTrigger asChild>
@@ -184,8 +183,8 @@ function App() {
                 </TooltipTrigger>
                 <TooltipContent className="flex flex-row items-center gap-2">
                   Save
-                  <span className="text-xs text-muted-foreground uppercase inline-flex flex-row items-center">
-                    <CommandIcon className="size-3 mr-0.5" /> S
+                  <span className="inline-flex flex-row items-center text-muted-foreground text-xs uppercase">
+                    <CommandIcon className="mr-0.5 size-3" /> S
                   </span>
                 </TooltipContent>
               </Tooltip>
@@ -221,28 +220,28 @@ function App() {
                   <BlocksIcon />
                 )}
                 Compile
-                <span className="text-xs text-muted-foreground uppercase inline-flex flex-row items-center">
-                  <CommandIcon className="size-3 mr-0.5" /> P
+                <span className="inline-flex flex-row items-center text-muted-foreground text-xs uppercase">
+                  <CommandIcon className="mr-0.5 size-3" /> P
                 </span>
               </Button>
             </div>
             <WebTeXEditor ref={editorRef} wordWrap={wordWrap} />
           </ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel className="flex flex-col bg-white rounded-md">
+          <ResizableHandle withHandle />
+          <ResizablePanel className="flex flex-col rounded-md bg-white">
             {compilePdf.isSuccess ? (
-              <iframe
-                className="w-full h-full"
-                src={compilePdf.data}
-                title="PDF Viewer"
-              />
+              <PDFViewer pdfData={compilePdf.data} />
             ) : compilePdf.isError ? (
-              <span className="text-red-500">{compilePdf.error.message}</span>
+              <div className="flex h-full items-center justify-center gap-2 bg-white">
+                <span className="max-w-lg text-red-500">
+                  {compilePdf.error.message}
+                </span>
+              </div>
             ) : (
-              <>
+              <div className="flex h-full items-center justify-center gap-2 bg-white">
                 <BlocksIcon className="size-4" />
                 <span className="text-sm">No PDF available</span>
-              </>
+              </div>
             )}
           </ResizablePanel>
         </ResizablePanelGroup>

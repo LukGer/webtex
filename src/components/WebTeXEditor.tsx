@@ -86,9 +86,9 @@ const WebTeXEditor = forwardRef<WebTeXEditorHandle, WebTeXEditorProps>(
     }, [selectedFile, path]);
 
     return (
-      <div className="h-full w-full relative">
+      <div className="relative h-full w-full">
         {!selectedFile && (
-          <div className="rounded-lg z-10 absolute inset-0 bg-black/10 flex flex-row items-center justify-center gap-2">
+          <div className="absolute inset-0 z-10 flex flex-row items-center justify-center gap-2 rounded-lg bg-black/10">
             <SidebarIcon className="size-4" />
             <span className="text-sm">Select a file on the left</span>
           </div>
