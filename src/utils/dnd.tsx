@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-interface DragAndDropContext {
+export interface IDragAndDropContext {
   dropTargetPath: string | null;
   setDropTargetPath: Dispatch<SetStateAction<string | null>>;
   draggedItemPath: string | null;
@@ -14,9 +14,9 @@ interface DragAndDropContext {
   onItemDropped: (itemPath: string, targetPath: string) => void;
 }
 
-export const DragAndDropContext = createContext<DragAndDropContext | undefined>(
-  undefined
-);
+export const DragAndDropContext = createContext<
+  IDragAndDropContext | undefined
+>(undefined);
 
 interface DragAndDropProviderProps {
   onItemDropped: (itemPath: string, targetPath: string) => void;

@@ -1,4 +1,4 @@
-import { DragAndDropContext } from "@/utils/dnd";
+import { DragAndDropContext, type IDragAndDropContext } from "@/utils/dnd";
 import { WorkspaceContext } from "@/utils/files";
 import { Collapsible } from "@radix-ui/react-collapsible";
 import { cva } from "class-variance-authority";
@@ -56,10 +56,59 @@ type FileTreeFolderItem = {
 
 type FileTreeItem = FileTreeRootItem | FileTreeFileItem | FileTreeFolderItem;
 
-const folderItemVariants = cva("bg-transparent rounded-md transition-colors", {
+const handleDragOver = (
+  e: React.DragEvent,
+  dndContext: IDragAndDropContext,
+  path: string
+) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (
+    dndContext.draggedItemPath !== null &&
+    dndContext.draggedItemPath !== path
+  ) {
+    dndContext.setDropTargetPath(path);
+  }
+};
+
+const handleDrop = (e: React.DragEvent, dndContext: IDragAndDropContext) => {
+  e.preventDefault();
+
+  if (
+    dndContext.draggedItemPath !== null &&
+    dndContext.dropTargetPath !== null
+  ) {
+    dndContext.onItemDropped(
+      dndContext.draggedItemPath,
+      dndContext.dropTargetPath
+    );
+  }
+
+  dndContext.setDropTargetPath(null);
+  dndContext.setDraggedItemPath(null);
+};
+
+const handleDragLeave = (dndContext: IDragAndDropContext, path: string) => {
+  if (dndContext.dropTargetPath === path) {
+    dndContext.setDropTargetPath(null);
+  }
+};
+
+const rootItemVariants = cva("rounded-md transition-colors", {
   variants: {
     isDropTarget: {
-      true: "bg-blue-400/10",
+      true: "bg-primary/10",
+      false: "bg-transparent",
+    },
+  },
+});
+
+const folderItemVariants = cva("rounded-md transition-colors", {
+  variants: {
+    isDropTarget: {
+      true: "bg-primary/10",
+      false: "bg-transparent",
     },
   },
 });
@@ -73,19 +122,24 @@ export default function SidebarFileTree({
 }) {
   const path = item.path;
   const name = item.path.split("/").pop() ?? "";
-  const parentPath = item.path.split("/").slice(0, -1).join("/");
-  const dndContext = use(DragAndDropContext);
+  const dndContext = use(DragAndDropContext)!;
 
   if (item.type === "root") {
+    const isDropTarget =
+      dndContext.dropTargetPath === item.path &&
+      dndContext.draggedItemPath !== item.path;
+
     return (
-      <SidebarMenu>
+      <SidebarMenu
+        className={rootItemVariants({ isDropTarget })}
+        onDragOver={(e) => handleDragOver(e, dndContext, path)}
+        onDrop={(e) => handleDrop(e, dndContext)}
+      >
         <SidebarMenuItem>
           <SidebarGroupLabel>Your files</SidebarGroupLabel>
 
           <ItemActions item={item} />
         </SidebarMenuItem>
-
-        <hr />
 
         {...children ?? []}
       </SidebarMenu>
@@ -98,7 +152,7 @@ export default function SidebarFileTree({
     return (
       <SidebarMenuItem
         draggable={true}
-        onDragStart={() => dndContext?.setDraggedItemPath(parentPath)}
+        onDragStart={() => dndContext.setDraggedItemPath(path)}
       >
         <SidebarMenuButton
           isActive={context.selectedPath === path}
@@ -119,47 +173,16 @@ export default function SidebarFileTree({
     );
   }
 
-  const isCurrentDropTarget =
-    dndContext?.dropTargetPath === item.path &&
-    dndContext?.draggedItemPath !== item.path;
+  const isDropTarget =
+    dndContext.dropTargetPath === item.path &&
+    dndContext.draggedItemPath !== item.path;
 
   return (
     <SidebarMenuItem
-      className={folderItemVariants({ isDropTarget: isCurrentDropTarget })}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        console.log("dragging over", path);
-
-        if (
-          dndContext?.draggedItemPath !== null &&
-          dndContext?.draggedItemPath !== path
-        ) {
-          dndContext?.setDropTargetPath(path);
-        }
-      }}
-      onDragLeave={() => {
-        if (dndContext?.dropTargetPath === path) {
-          dndContext?.setDropTargetPath(null);
-        }
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-
-        if (
-          dndContext?.draggedItemPath !== null &&
-          dndContext?.dropTargetPath !== null
-        ) {
-          dndContext?.onItemDropped(
-            dndContext.draggedItemPath,
-            dndContext.dropTargetPath
-          );
-        }
-
-        dndContext?.setDropTargetPath(null);
-        dndContext?.setDraggedItemPath(null);
-      }}
+      className={folderItemVariants({ isDropTarget })}
+      onDragOver={(e) => handleDragOver(e, dndContext, path)}
+      onDrop={(e) => handleDrop(e, dndContext)}
+      onDragLeave={() => handleDragLeave(dndContext, path)}
     >
       <Collapsible
         className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
