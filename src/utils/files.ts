@@ -1,5 +1,12 @@
 import { createContext } from "react";
 
+type RootItem = {
+  type: "root";
+  path: string;
+  children: TreeItem[];
+  handle: FileSystemDirectoryHandle;
+};
+
 export type FileItem = {
   path: string;
   type: "file";
@@ -15,9 +22,9 @@ export type FolderItem = {
   parentHandle: FileSystemDirectoryHandle;
 };
 
-export type TreeItem = FileItem | FolderItem;
+export type TreeItem = RootItem | FileItem | FolderItem;
 
-export async function openFolderAndLoadFiles(): Promise<FolderItem> {
+export async function openFolderAndLoadFiles(): Promise<RootItem> {
   const root = await navigator.storage.getDirectory();
 
   const files = await loadFolderItems(root, "");
@@ -33,11 +40,10 @@ export async function openFolderAndLoadFiles(): Promise<FolderItem> {
   });
 
   return {
+    type: "root",
     path: "",
-    type: "folder",
     children: files,
     handle: root,
-    parentHandle: null!,
   };
 }
 

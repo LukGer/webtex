@@ -17,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import {
+  SidebarGroupLabel,
+  SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -29,6 +31,13 @@ type ItemAction = {
   icon: React.ReactNode;
   variant?: "destructive" | "default";
   onClick: () => void;
+};
+
+type FileTreeRootItem = {
+  type: "root";
+  path: string;
+  handle: FileSystemDirectoryHandle;
+  actions: ItemAction[];
 };
 
 type FileTreeFileItem = {
@@ -45,7 +54,7 @@ type FileTreeFolderItem = {
   actions: ItemAction[];
 };
 
-type FileTreeItem = FileTreeFileItem | FileTreeFolderItem;
+type FileTreeItem = FileTreeRootItem | FileTreeFileItem | FileTreeFolderItem;
 
 const folderItemVariants = cva("bg-transparent rounded-md transition-colors", {
   variants: {
@@ -62,8 +71,26 @@ export default function SidebarFileTree({
   item: FileTreeItem;
   children?: React.ReactNode[];
 }) {
+  const path = item.path;
   const name = item.path.split("/").pop() ?? "";
+  const parentPath = item.path.split("/").slice(0, -1).join("/");
   const dndContext = use(DragAndDropContext);
+
+  if (item.type === "root") {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarGroupLabel>Your files</SidebarGroupLabel>
+
+          <ItemActions item={item} />
+        </SidebarMenuItem>
+
+        <hr />
+
+        {...children ?? []}
+      </SidebarMenu>
+    );
+  }
 
   if (item.type === "file") {
     const context = use(WorkspaceContext);
@@ -71,17 +98,17 @@ export default function SidebarFileTree({
     return (
       <SidebarMenuItem
         draggable={true}
-        onDragStart={() => dndContext?.setDraggedItemPath(item.path)}
+        onDragStart={() => dndContext?.setDraggedItemPath(parentPath)}
       >
         <SidebarMenuButton
-          isActive={context.selectedPath === item.path}
+          isActive={context.selectedPath === path}
           className="flex flex-row items-center"
-          onClick={() => context.setSelectedPath(item.path)}
+          onClick={() => context.setSelectedPath(path)}
         >
           <FileIcon />
           <span>{name}</span>
 
-          {item.path === context.mainFilePath && (
+          {path === context.mainFilePath && (
             <div className="size-2 rotate-45 rounded-full bg-yellow-400" />
           )}
 
@@ -102,24 +129,29 @@ export default function SidebarFileTree({
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
+
+        console.log("dragging over", path);
+
         if (
-          dndContext?.draggedItemPath &&
-          dndContext.draggedItemPath !== item.path
+          dndContext?.draggedItemPath !== null &&
+          dndContext?.draggedItemPath !== path
         ) {
-          dndContext?.setDropTargetPath(item.path);
+          dndContext?.setDropTargetPath(path);
         }
       }}
       onDragLeave={() => {
-        if (dndContext?.dropTargetPath === item.path) {
+        if (dndContext?.dropTargetPath === path) {
           dndContext?.setDropTargetPath(null);
         }
       }}
       onDrop={(e) => {
         e.preventDefault();
 
-        if (!dndContext?.draggedItemPath || !dndContext.dropTargetPath) {
-        } else {
-          dndContext.onItemDropped(
+        if (
+          dndContext?.draggedItemPath !== null &&
+          dndContext?.dropTargetPath !== null
+        ) {
+          dndContext?.onItemDropped(
             dndContext.draggedItemPath,
             dndContext.dropTargetPath
           );

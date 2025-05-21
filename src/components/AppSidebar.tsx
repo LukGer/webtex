@@ -16,31 +16,15 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useOpfs } from "@/hooks/use-opfs";
 import { DragAndDropProvider } from "@/utils/dnd";
 import type { TreeItem } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
-import {
-  FilePlusIcon,
-  FolderPlusIcon,
-  MoreHorizontalIcon,
-  TrashIcon,
-  UploadIcon,
-} from "lucide-react";
+import { FolderPlusIcon, TrashIcon } from "lucide-react";
 import { type PropsWithChildren, useRef, useState } from "react";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import SidebarFileTree from "./SidebarFileTree";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 
 export function AppSidebar() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -128,6 +112,35 @@ export function AppSidebar() {
   });
 
   function FileTree({ item }: { item: TreeItem }) {
+    if (item.type === "root") {
+      return (
+        <SidebarFileTree
+          item={{
+            type: "root",
+            path: item.path,
+            handle: item.handle,
+            actions: [
+              {
+                id: "upload",
+                name: "Upload File",
+                icon: <FolderPlusIcon className="size-4" />,
+                onClick: async () => {
+                  if (!item.handle) return;
+                  await uploadFileMutation.mutateAsync({
+                    folder: item.handle,
+                  });
+                },
+              },
+            ],
+          }}
+        >
+          {item.children.map((child) => (
+            <FileTree key={child.path} item={child} />
+          ))}
+        </SidebarFileTree>
+      );
+    }
+
     if (item.type === "file") {
       return (
         <SidebarFileTree
@@ -193,50 +206,15 @@ export function AppSidebar() {
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarGroupLabel>Files</SidebarGroupLabel>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <SidebarMenuAction>
-                        <MoreHorizontalIcon />
-                      </SidebarMenuAction>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => setDialogOpen(true)}>
-                        New File
-                        <div className="flex-1" />
-                        <FilePlusIcon className="size-4" />
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          if (!opfsQuery.isSuccess) return;
-                          uploadFileMutation.mutate({
-                            folder: opfsQuery.data.handle,
-                          });
-                        }}
-                      >
-                        Upload File
-                        <div className="flex-1" />
-                        <UploadIcon className="size-4" />
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </SidebarMenuItem>
-
-                <hr />
-
-                {opfsQuery.isSuccess && (
-                  <DragAndDropProvider
-                    onItemDropped={(itemPath, targetPath) => {
-                      alert(`Item dropped: ${itemPath}, ${targetPath}`);
-                    }}
-                  >
-                    <FileTree item={opfsQuery.data} />
-                  </DragAndDropProvider>
-                )}
-              </SidebarMenu>
+              {opfsQuery.isSuccess && (
+                <DragAndDropProvider
+                  onItemDropped={(itemPath, targetPath) => {
+                    console.log("Item dropped: ", itemPath, targetPath);
+                  }}
+                >
+                  <FileTree item={opfsQuery.data} />
+                </DragAndDropProvider>
+              )}
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
