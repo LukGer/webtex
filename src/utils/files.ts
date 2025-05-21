@@ -4,6 +4,7 @@ export type FileItem = {
   path: string;
   type: "file";
   handle: FileSystemFileHandle;
+  parentHandle: FileSystemDirectoryHandle;
 };
 
 export type FolderItem = {
@@ -11,11 +12,12 @@ export type FolderItem = {
   type: "folder";
   children: TreeItem[];
   handle: FileSystemDirectoryHandle;
+  parentHandle: FileSystemDirectoryHandle;
 };
 
 export type TreeItem = FileItem | FolderItem;
 
-export async function openFolderAndLoadFiles() {
+export async function openFolderAndLoadFiles(): Promise<FolderItem> {
   const root = await navigator.storage.getDirectory();
 
   const files = await loadFolderItems(root, "");
@@ -30,7 +32,13 @@ export async function openFolderAndLoadFiles() {
     return a.path.localeCompare(b.path);
   });
 
-  return { root, files };
+  return {
+    path: "",
+    type: "folder",
+    children: files,
+    handle: root,
+    parentHandle: null!,
+  };
 }
 
 async function loadFolderItems(
@@ -48,6 +56,7 @@ async function loadFolderItems(
         path: itemPath,
         type: "file",
         handle: fileHandle,
+        parentHandle: handle,
       };
       files.push(fileItem);
     } else if (value.kind === "directory") {
@@ -57,6 +66,7 @@ async function loadFolderItems(
         type: "folder",
         children: await loadFolderItems(folderHandle, itemPath), // Pass the new path recursively
         handle: folderHandle,
+        parentHandle: handle,
       };
 
       files.push(folderItem);

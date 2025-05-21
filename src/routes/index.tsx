@@ -76,7 +76,7 @@ function App() {
 
   const compilePdf = useMutation({
     mutationFn: async (): Promise<Uint8Array<ArrayBuffer>> => {
-      const root = opfsQuery.data?.root;
+      const root = opfsQuery.data?.handle;
       const mailFilePath = mainFilePath;
 
       if (!engine?.isReady() || !root || !mailFilePath) {
@@ -136,7 +136,7 @@ function App() {
       value={{
         selectedPath,
         setSelectedPath,
-        files: opfsQuery.data?.files ?? [],
+        files: opfsQuery.data?.children ?? [],
         mainFilePath,
         setMainFilePath,
       }}

@@ -19,30 +19,22 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
-  SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
 } from "@/components/ui/sidebar";
 import { useOpfs } from "@/hooks/use-opfs";
-import { type TreeItem, WorkspaceContext } from "@/utils/files";
+import { DragAndDropProvider } from "@/utils/dnd";
+import type { TreeItem } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
 import {
-  ChevronRightIcon,
-  FileIcon,
   FilePlusIcon,
-  FolderIcon,
   FolderPlusIcon,
   MoreHorizontalIcon,
   TrashIcon,
   UploadIcon,
 } from "lucide-react";
-import { type PropsWithChildren, use, useRef, useState } from "react";
+import { type PropsWithChildren, useRef, useState } from "react";
 import { AppSidebarHeader } from "./AppSidebarHeader";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./ui/collapsible";
+import SidebarFileTree from "./SidebarFileTree";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,6 +127,65 @@ export function AppSidebar() {
     },
   });
 
+  function FileTree({ item }: { item: TreeItem }) {
+    if (item.type === "file") {
+      return (
+        <SidebarFileTree
+          item={{
+            type: "file",
+            path: item.path,
+            handle: item.handle,
+            actions: [
+              {
+                id: "delete",
+                name: "Delete",
+                icon: <TrashIcon className="size-4" />,
+                variant: "destructive",
+                onClick: async () => {
+                  if (!item.handle) return;
+                  await deleteFileMutation.mutateAsync({
+                    parentHandle: item.parentHandle,
+                    name: item.path,
+                  });
+                },
+              },
+            ],
+          }}
+        />
+      );
+    }
+
+    return (
+      <SidebarFileTree
+        item={{
+          type: "folder",
+          path: item.path,
+          handle: item.handle,
+          actions: [
+            {
+              id: "create-folder",
+              name: "Create Folder",
+              icon: <FolderPlusIcon className="size-4" />,
+              onClick: async () => {
+                if (!item.handle) return;
+                const name = prompt("Folder name");
+                if (!name) return;
+                await createFolderMutation.mutateAsync({
+                  parentHandle: item.handle,
+                  name,
+                });
+              },
+            },
+          ],
+        }}
+      >
+        {item.children.map((child) => (
+          <FileTree key={child.path} item={child} />
+        ))}
+      </SidebarFileTree>
+    );
+  }
+
   return (
     <>
       <Sidebar collapsible="offcanvas">
@@ -162,7 +213,7 @@ export function AppSidebar() {
                         onClick={() => {
                           if (!opfsQuery.isSuccess) return;
                           uploadFileMutation.mutate({
-                            folder: opfsQuery.data.root,
+                            folder: opfsQuery.data.handle,
                           });
                         }}
                       >
@@ -176,26 +227,15 @@ export function AppSidebar() {
 
                 <hr />
 
-                {opfsQuery.isSuccess &&
-                  opfsQuery.data.files.map((item) => (
-                    <Tree
-                      key={item.path}
-                      item={item}
-                      parentHandle={opfsQuery.data.root}
-                      onDeleteItem={(parentHandle, name) =>
-                        deleteFileMutation.mutate({ parentHandle, name })
-                      }
-                      onUploadFile={(folder) => {
-                        uploadFileMutation.mutate({ folder });
-                      }}
-                      onCreateFolder={(folder) => {
-                        createFolderMutation.mutate({
-                          parentHandle: folder,
-                          name: "New Folder",
-                        });
-                      }}
-                    />
-                  ))}
+                {opfsQuery.isSuccess && (
+                  <DragAndDropProvider
+                    onItemDropped={(itemPath, targetPath) => {
+                      alert(`Item dropped: ${itemPath}, ${targetPath}`);
+                    }}
+                  >
+                    <FileTree item={opfsQuery.data} />
+                  </DragAndDropProvider>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -210,140 +250,12 @@ export function AppSidebar() {
           if (!opfsQuery.isSuccess) return;
 
           addFileMutation.mutate({
-            root: opfsQuery.data.root,
+            root: opfsQuery.data.handle,
             path,
           });
         }}
       />
     </>
-  );
-}
-
-function Tree({
-  item,
-  parentHandle,
-  onDeleteItem,
-  onUploadFile,
-  onCreateFolder,
-}: {
-  item: TreeItem;
-  parentHandle: FileSystemDirectoryHandle;
-  onDeleteItem: (parentHandle: FileSystemDirectoryHandle, name: string) => void;
-  onUploadFile: (folder: FileSystemDirectoryHandle) => void;
-  onCreateFolder: (folder: FileSystemDirectoryHandle) => void;
-}) {
-  const name = item.path.split("/").pop() ?? "";
-
-  if (item.type === "file") {
-    const context = use(WorkspaceContext);
-
-    return (
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          isActive={context.selectedPath === item.path}
-          className="flex flex-row items-center"
-          onClick={() => context.setSelectedPath(item.path)}
-        >
-          <FileIcon />
-          <span>{name}</span>
-
-          {item.path === context.mainFilePath && (
-            <div className="size-2 rounded-full rotate-45 bg-yellow-400" />
-          )}
-
-          <div className="flex-1" />
-        </SidebarMenuButton>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuAction>
-              <MoreHorizontalIcon />
-            </SidebarMenuAction>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem>Rename File</DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                const name = item.path.split("/").pop() ?? "";
-                onDeleteItem(parentHandle, name);
-              }}
-            >
-              Delete File
-              <TrashIcon className="ml-2 h-4 w-4" />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    );
-  }
-
-  return (
-    <SidebarMenuItem>
-      <Collapsible
-        className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
-        defaultOpen={true}
-      >
-        <CollapsibleTrigger asChild>
-          <SidebarMenuButton>
-            <ChevronRightIcon className="transition-transform" />
-            <FolderIcon />
-            {name}
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {item.children.map((subItem) => (
-              <Tree
-                key={subItem.path}
-                item={subItem}
-                parentHandle={item.handle}
-                onDeleteItem={onDeleteItem}
-                onUploadFile={onUploadFile}
-                onCreateFolder={onCreateFolder}
-              />
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </Collapsible>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <SidebarMenuAction>
-            <MoreHorizontalIcon />
-          </SidebarMenuAction>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem
-            onClick={() => {
-              onUploadFile(item.handle);
-            }}
-          >
-            Upload File
-            <div className="flex-1" />
-            <UploadIcon className="h-4 w-4" />
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              onCreateFolder(item.handle);
-            }}
-          >
-            Create Folder
-            <div className="flex-1" />
-            <FolderPlusIcon className="h-4 w-4" />
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => {
-              const name = item.path.split("/").pop() ?? "";
-              onDeleteItem(parentHandle, name);
-            }}
-          >
-            Delete Folder
-            <div className="flex-1" />
-            <TrashIcon className="h-4 w-4" />
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </SidebarMenuItem>
   );
 }
 
