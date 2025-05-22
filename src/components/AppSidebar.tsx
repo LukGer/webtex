@@ -17,11 +17,15 @@ import {
   SidebarGroup,
   SidebarGroupContent,
 } from "@/components/ui/sidebar";
-import { useOpfs } from "@/hooks/use-opfs";
+import {
+  useOpfs,
+  useOpfsFileMutations,
+  useOpfsFolderMutations,
+} from "@/hooks/opfs";
 import { DragAndDropProvider } from "@/utils/dnd";
 import type { TreeItem } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
-import { FolderPlusIcon, TrashIcon } from "lucide-react";
+import { FilePlusIcon, FolderPlusIcon, TrashIcon } from "lucide-react";
 import { type PropsWithChildren, useRef, useState } from "react";
 import { AppSidebarHeader } from "./AppSidebarHeader";
 import SidebarFileTree from "./SidebarFileTree";
@@ -31,51 +35,8 @@ export function AppSidebar() {
 
   const opfsQuery = useOpfs();
 
-  const addFileMutation = useMutation({
-    mutationFn: async ({
-      root,
-      path,
-    }: {
-      root: FileSystemDirectoryHandle;
-      path: string;
-    }) => {
-      const directories = path.split("/");
-      const fileName = directories.pop()!;
-
-      let parentDirectoryHandle = root;
-
-      for (const dir of directories) {
-        parentDirectoryHandle = await parentDirectoryHandle.getDirectoryHandle(
-          dir,
-          {
-            create: true,
-          }
-        );
-      }
-
-      await parentDirectoryHandle.getFileHandle(fileName, {
-        create: true,
-      });
-    },
-    onSuccess: () => {
-      opfsQuery.refetch();
-    },
-  });
-
-  const deleteFileMutation = useMutation({
-    mutationFn: async ({
-      parentHandle,
-      name,
-    }: {
-      parentHandle: FileSystemDirectoryHandle;
-      name: string;
-    }) => {
-      await parentHandle.removeEntry(name, { recursive: true });
-    },
-    onSuccess: () => {
-      opfsQuery.refetch();
-    },
-  });
+  const fileMutations = useOpfsFileMutations();
+  const folderMutations = useOpfsFolderMutations();
 
   const uploadFileMutation = useMutation({
     mutationFn: async ({ folder }: { folder: FileSystemDirectoryHandle }) => {
@@ -90,21 +51,6 @@ export function AppSidebar() {
       const writableStream = await writable.createWritable();
       await writableStream.write(file);
       await writableStream.close();
-    },
-    onSuccess: () => {
-      opfsQuery.refetch();
-    },
-  });
-
-  const createFolderMutation = useMutation({
-    mutationFn: async ({
-      parentHandle,
-      name,
-    }: {
-      parentHandle: FileSystemDirectoryHandle;
-      name: string;
-    }) => {
-      await parentHandle.getDirectoryHandle(name, { create: true });
     },
     onSuccess: () => {
       opfsQuery.refetch();
@@ -148,6 +94,7 @@ export function AppSidebar() {
             type: "file",
             path: item.path,
             handle: item.handle,
+            parentHandle: item.parentHandle,
             actions: [
               {
                 id: "delete",
@@ -156,7 +103,7 @@ export function AppSidebar() {
                 variant: "destructive",
                 onClick: async () => {
                   if (!item.handle) return;
-                  await deleteFileMutation.mutateAsync({
+                  await fileMutations.deleteFileMutation.mutateAsync({
                     parentHandle: item.parentHandle,
                     name: item.path,
                   });
@@ -174,7 +121,16 @@ export function AppSidebar() {
           type: "folder",
           path: item.path,
           handle: item.handle,
+          parentHandle: item.parentHandle,
           actions: [
+            {
+              id: "add-file",
+              name: "Add File",
+              icon: <FilePlusIcon className="size-4" />,
+              onClick: async () => {
+                console.log("Add file clicked");
+              },
+            },
             {
               id: "create-folder",
               name: "Create Folder",
@@ -183,9 +139,21 @@ export function AppSidebar() {
                 if (!item.handle) return;
                 const name = prompt("Folder name");
                 if (!name) return;
-                await createFolderMutation.mutateAsync({
+                await folderMutations.createFolderMutation.mutateAsync({
                   parentHandle: item.handle,
                   name,
+                });
+              },
+            },
+            {
+              id: "delete-folder",
+              name: "Delete Folder",
+              variant: "destructive",
+              icon: <TrashIcon className="size-4" />,
+              onClick: async () => {
+                await folderMutations.deleteFolderMutation.mutateAsync({
+                  parentHandle: item.handle,
+                  name: item.path,
                 });
               },
             },
@@ -208,8 +176,12 @@ export function AppSidebar() {
             <SidebarGroupContent>
               {opfsQuery.isSuccess && (
                 <DragAndDropProvider
-                  onItemDropped={(itemPath, targetPath) => {
-                    console.log("Item dropped: ", itemPath, targetPath);
+                  onItemDropped={(draggedItem, dropTarget) => {
+                    fileMutations.moveFileMutation.mutate({
+                      sourceFileHandle: draggedItem.handle,
+                      sourceParentHandle: draggedItem.parentHandle,
+                      targetDirectoryHandle: dropTarget.handle,
+                    });
                   }}
                 >
                   <FileTree item={opfsQuery.data} />
@@ -227,7 +199,7 @@ export function AppSidebar() {
 
           if (!opfsQuery.isSuccess) return;
 
-          addFileMutation.mutate({
+          folderMutations.addFileMutation.mutate({
             root: opfsQuery.data.handle,
             path,
           });

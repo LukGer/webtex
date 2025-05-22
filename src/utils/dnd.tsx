@@ -6,12 +6,26 @@ import {
   useState,
 } from "react";
 
+export interface DraggedItemInfo {
+  path: string;
+  handle: FileSystemFileHandle;
+  parentHandle: FileSystemDirectoryHandle;
+}
+
+export interface DropTargetInfo {
+  path: string;
+  handle: FileSystemDirectoryHandle;
+}
+
 export interface IDragAndDropContext {
-  dropTargetPath: string | null;
-  setDropTargetPath: Dispatch<SetStateAction<string | null>>;
-  draggedItemPath: string | null;
-  setDraggedItemPath: Dispatch<SetStateAction<string | null>>;
-  onItemDropped: (itemPath: string, targetPath: string) => void;
+  dropTarget: DropTargetInfo | null;
+  setDropTarget: Dispatch<SetStateAction<DropTargetInfo | null>>;
+  draggedItem: DraggedItemInfo | null;
+  setDraggedItem: Dispatch<SetStateAction<DraggedItemInfo | null>>;
+  onItemDropped: (
+    draggedItem: DraggedItemInfo,
+    dropTarget: DropTargetInfo
+  ) => void;
 }
 
 export const DragAndDropContext = createContext<
@@ -19,7 +33,10 @@ export const DragAndDropContext = createContext<
 >(undefined);
 
 interface DragAndDropProviderProps {
-  onItemDropped: (itemPath: string, targetPath: string) => void;
+  onItemDropped: (
+    draggedItem: DraggedItemInfo,
+    dropTarget: DropTargetInfo
+  ) => void;
   children: React.ReactNode;
 }
 
@@ -27,18 +44,18 @@ export const DragAndDropProvider: React.FC<DragAndDropProviderProps> = ({
   onItemDropped,
   children,
 }) => {
-  const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
-  const [draggedItemPath, setDraggedItemPath] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTargetInfo | null>(null);
+  const [draggedItem, setDraggedItem] = useState<DraggedItemInfo | null>(null);
 
   const contextValue = useMemo(
     () => ({
-      dropTargetPath,
-      setDropTargetPath,
-      draggedItemPath,
-      setDraggedItemPath,
+      dropTarget,
+      setDropTarget,
+      draggedItem,
+      setDraggedItem,
       onItemDropped,
     }),
-    [dropTargetPath, draggedItemPath, onItemDropped]
+    [dropTarget, draggedItem, onItemDropped]
   );
 
   return (

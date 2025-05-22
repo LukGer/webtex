@@ -16,7 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useOpfs } from "@/hooks/use-opfs";
+import { useOpfs } from "@/hooks/opfs";
 import { WorkspaceContext } from "@/utils/files";
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -42,15 +42,12 @@ export const Route = createFileRoute("/")({
 function App() {
   const [selectedPath, setSelectedPath] = useQueryState("path");
   const [mainFilePath, setMainFilePath] = useState<string | null>("main.tex");
-
   const [wordWrap, setWordWrap] = useState(false);
 
   const editorRef = useRef<WebTeXEditorHandle | null>(null);
 
   const sidebar = useSidebar();
-
   const engine = usePdfTeXEngine();
-
   const opfsQuery = useOpfs();
 
   const syncOpfsToMemFs = async (
@@ -125,6 +122,17 @@ function App() {
     (e) => {
       e.preventDefault();
       saveFileMutation.mutate();
+    },
+    {
+      enableOnFormTags: true,
+    }
+  );
+
+  useHotkeys(
+    "meta+p",
+    (e) => {
+      e.preventDefault();
+      compilePdf.mutate();
     },
     {
       enableOnFormTags: true,
